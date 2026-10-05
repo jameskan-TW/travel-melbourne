@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f6e5a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="墨爾本行程">
+<meta name="robots" content="noindex, nofollow">
+<title>墨爾本隨身行程</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+html{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<style>
+/* Layout: single column, phone-first. Sticky "now" strip, then Next stop, Where am I, Nearby, Full itinerary, Practical. */
+:root{
+  --bg:#f3efe6;        /* warm sand */
+  --card:#fffdf8;
+  --fg:#1d2420;
+  --muted:#5f6a63;
+  --line:#d9d2c3;
+  --accent:#0f6e5a;    /* eucalyptus green, Melbourne tram green family */
+  --accent-soft:#dcebe3;
+  --warn:#b4541a;
+  --warn-soft:#f6e3d3;
+  --chip:#e9e3d6;
+  --sans:"Noto Sans TC",-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
+  --mono:"DM Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15191a;--card:#1f2526;--fg:#eceae3;--muted:#a3ab9f;--line:#333b3a;
+    --accent:#5fc4a4;--accent-soft:#1f3a33;--warn:#f0a06a;--warn-soft:#3b2a1d;--chip:#2a3233;color-scheme:dark
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15191a;--card:#1f2526;--fg:#eceae3;--muted:#a3ab9f;--line:#333b3a;
+  --accent:#5fc4a4;--accent-soft:#1f3a33;--warn:#f0a06a;--warn-soft:#3b2a1d;--chip:#2a3233;color-scheme:dark
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.55}
+.wrap{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:0 40px}
+a{color:var(--accent)}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.25}
+h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500;margin:28px 0 10px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.now{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:12px 10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.now h1{font-size:20px;font-weight:700}
+.now .sub{color:var(--muted);font-size:13px}
+.now .clock{text-align:right}
+.now .clock .big{font-size:26px;font-weight:500;line-height:1.1}
+.now .clock .tpe{font-size:12px;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.next{border-left:5px solid var(--accent)}
+.next .when{font-size:13px;color:var(--muted)}
+.next .title{font-size:20px;font-weight:700;margin:4px 0 2px}
+.next .addr{color:var(--muted);font-size:14px}
+.next .how{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:14px}
+.countdown{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:2px 10px;font-size:13px;font-weight:500;margin-top:6px}
+.countdown.warn{background:var(--warn-soft);color:var(--warn)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btn{display:inline-block;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);text-decoration:none;font-size:14px;font-weight:500}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--chip);color:var(--fg);border-radius:999px;padding:7px 13px;font-size:14px;font-family:var(--sans);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip:focus-visible,.btn:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hint{color:var(--muted);font-size:13px;margin-top:8px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 12px}
+.filters .chip{padding:5px 11px;font-size:13px}
+.list{display:flex;flex-direction:column;gap:10px}
+.poi{display:grid;grid-template-columns:1fr auto;gap:4px 12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.poi .name{font-weight:700;font-size:16px;min-width:0}
+.poi .dist{text-align:right;color:var(--accent);font-weight:500;white-space:nowrap}
+.poi .dist small{display:block;color:var(--muted);font-weight:400;font-size:12px}
+.poi .desc{grid-column:1/-1;color:var(--muted);font-size:14px;min-width:0}
+.poi .meta{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px}
+.tag{background:var(--chip);border-radius:6px;padding:1px 7px;color:var(--muted)}
+.tag.kid{background:var(--accent-soft);color:var(--accent)}
+.poi .links{margin-left:auto;display:flex;gap:6px}
+.poi .links a{font-size:13px;text-decoration:none;font-weight:500;padding:3px 10px;border-radius:8px;border:1px solid var(--line)}
+.poi .links a.go{background:var(--accent);border-color:var(--accent);color:#fff}
+.steps{counter-reset:s;display:flex;flex-direction:column;gap:0}
+.step{display:grid;grid-template-columns:30px 1fr;gap:4px 12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.step:last-child{border-bottom:0}
+.step::before{counter-increment:s;content:counter(s);width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-family:var(--mono);font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.step .st{font-weight:700;font-size:15px}
+.step .sd{grid-column:2;color:var(--muted);font-size:14px}
+.step .sd b{color:var(--fg);font-weight:500}
+.step .sl{grid-column:2;display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.step .sl a{font-size:13px;text-decoration:none;font-weight:500;padding:4px 10px;border-radius:8px;border:1px solid var(--line)}
+.callout{background:var(--warn-soft);color:var(--fg);border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:12px}
+.callout b{color:var(--warn)}
+.day{margin-top:14px}
+.day h3{font-size:15px;font-weight:700;padding-bottom:6px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.day h3 span{color:var(--muted);font-weight:400;font-size:13px;margin-left:8px}
+.ev{display:grid;grid-template-columns:62px 1fr;gap:2px 10px;padding:6px 0}
+.ev .t{color:var(--muted);font-size:14px}
+.ev .n{font-weight:500}
+.ev .d{grid-column:2;color:var(--muted);font-size:13px}
+.ev.past{opacity:.5}
+.ev.current .n{color:var(--accent)}
+.tbc{color:var(--warn);font-size:12px;margin-left:6px}
+.prac{display:grid;gap:8px}
+.prac .row{display:grid;grid-template-columns:92px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.prac .row:last-child{border-bottom:0}
+.prac .k{color:var(--muted)}
+details summary{cursor:pointer;font-weight:500;color:var(--accent);list-style:none;padding:8px 0}
+details summary::-webkit-details-marker{display:none}
+@media (prefers-reduced-motion:no-preference){.chip,.btn{transition:background .15s,color .15s}}
+</style>
+
+<div class="wrap">
+  <header class="now">
+    <div>
+      <h1>墨爾本隨身行程</h1>
+      <div class="sub" id="dayLabel">10/08–10/14・華航 CI057 / CI058</div>
+    </div>
+    <div class="clock mono">
+      <div class="big" id="melTime">--:--</div>
+      <div class="tpe" id="melDate">墨爾本時間</div>
+      <div class="tpe" id="tpeTime">台北 --:--</div>
+    </div>
+  </header>
+
+  <h2>下一站</h2>
+  <div class="card next" id="nextCard">
+    <div class="when" id="nextWhen">載入中</div>
+    <div class="title" id="nextTitle"></div>
+    <div class="addr" id="nextAddr"></div>
+    <div id="nextCountdown" class="countdown" hidden></div>
+    <div class="how" id="nextHow" hidden></div>
+    <div class="btns" id="nextBtns"></div>
+  </div>
+  <div class="hint" id="afterNext"></div>
+
+  <h2>落地出關 → SkyBus 進市區</h2>
+  <div class="card">
+    <div class="callout"><b>10/09（五）11:40 抵達 T2。</b>全程大約 1.5–2 小時到飯店。帶了泡麵、零食、茶葉、肉乾一律在入境卡上勾「有」申報，申報不罰，沒申報被查到罰很重。<br>另一個選項：T2 出口外的計程車招呼站，要一台 maxi／wagon 直達飯店約 35 分鐘、AUD 60–75，小孩依法不需兒童座椅；比 SkyBus（AUD 58.40 單程）加 Southern Cross 計程車（AUD 15–25）差不多，兩個小孩累的話可以考慮。</div>
+    <div class="steps" id="arrival"></div>
+  </div>
+
+  <h2>我在哪一區</h2>
+  <div class="chips" id="zoneChips" role="group" aria-label="選擇目前所在區域"></div>
+  <div class="hint">網頁拿不到手機定位，點一下你所在的區域，下面的距離、步行時間和導航起點都會跟著換。</div>
+  <div class="btns" style="margin-top:10px">
+    <a class="btn" id="zoneMap" href="#" target="_blank" rel="noopener">在 Google Maps 開啟這一區</a>
+    <a class="btn" href="https://www.google.com/maps/search/?api=1&query=15-21+Therry+Street+Melbourne+VIC+3000" target="_blank" rel="noopener">回飯店 ibis</a>
+  </div>
+
+  <h2>附近可以去</h2>
+  <div class="filters" id="filters" role="group" aria-label="篩選景點"></div>
+  <div class="list" id="poiList"></div>
+
+  <h2>完整行程</h2>
+  <div class="card" id="itin"></div>
+
+  <h2>實用資訊</h2>
+  <div class="card prac" id="prac">
+    <div class="row"><div class="k">時差</div><div>墨爾本比台北快 3 小時（10 月已進入夏令時間 AEDT）。</div></div>
+    <div class="row"><div class="k">機場進城</div><div>SkyBus 站牌在 T1 與 T3 門外（T2 沒有站牌，走 3–5 分鐘），04:00–01:00 隨到隨上，平均 30 分鐘到 Southern Cross。全家 Return 票 AUD 97.80（2 歲免票）。回程 10/13 從 Southern Cross <b>Bay 75</b> 上車，18:30 前出發。</div></div>
+    <div class="row"><div class="k">市區交通</div><div>CBD 範圍內電車免費（Free Tram Zone，含 Queen Victoria Market、Flinders St、Docklands）。出免費區要用 myki 卡，或直接在讀卡機感應信用卡／Apple Pay。</div></div>
+    <div class="row"><div class="k">叫車（4 人＋4 件＋推車）</div><div><b>有行李時：排計程車招呼站，不要叫 Uber。</b>維州法規：路邊／招呼站上車的計程車免兒童座椅（2 歲抱著坐後座、4 歲坐後座繫安全帶即可），Uber 等預約車則 7 歲以下必須有兒童座椅。T2 門外和 Southern Cross 的 Spencer St 都有招呼站，跟站務員說「maxi 或 wagon，4 big bags and a pram」，約 AUD 60–75（機場）／AUD 15–25（Southern Cross 到飯店）。<br><b>市區沒行李時：用 Uber App 選「Uber Child Seat」</b>，司機備 1 張兒童座椅（0–4 歲）＋1 張增高墊（4–8 歲），剛好你們兩個小孩，最多 5 人、加收 AUD 9.99，可提前 30 分鐘到 30 天預約，配對後要向司機確認座椅需求。一般 UberX／Comfort／Max 不會有座椅，載小孩是違法的，司機可拒載。</div></div>
+    <div class="row"><div class="k">去 Carlton／大學</div><div>Swanston St 上往北的電車：1、3、5、6、16、64、67、72 到 Melbourne University 站；1、6 可到 Lygon St。從飯店步行到大學約 20 分鐘，到 Faraday St 約 15 分鐘。</div></div>
+    <div class="row"><div class="k">緊急</div><div>警察／救護／消防：<span class="mono">000</span>。台北經濟文化辦事處（墨爾本）：Level 46, 80 Collins St。</div></div>
+    <div class="row"><div class="k">行李額度</div><div>每人託運 <b>2 件 × 23 kg</b>（三邊合計 ≤158 cm），4 人共 8 件額度；金卡本人再加 1 件。手提每人 1 件 ≤7 kg，56×36×23 cm。兩端都是 <b>Terminal 2</b>。</div></div>
+    <div class="row"><div class="k">報到</div><div>網路報到起飛前 48 小時開放：去程 10/06（二）23:30 台北時間起，回程 10/11（日）21:50 墨爾本時間起。機場櫃台建議起飛前 3 小時到。</div></div>
+    <div class="row"><div class="k">訂位</div><div>華航「管理行程」：<a href="https://booking.china-airlines.com/ManageBookingPortal/Login?lang=zh-tw" target="_blank" rel="noopener">booking.china-airlines.com</a>（訂位代號在 Gmail 8/18 的電子機票信）。</div></div>
+    <div class="row"><div class="k">檔案</div><div>詳細行程與待辦在電腦 <span class="mono">墨爾本之旅/行程.md</span>。</div></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---- Data ---------------------------------------------------------------
+  // AEDT = UTC+11 for the whole trip (DST started 2026-10-04).
+  const OFF = 11;
+  function mel(y,m,d,h,mi){ return Date.UTC(y,m-1,d,h-OFF,mi||0); }
+  function tpe(y,m,d,h,mi){ return Date.UTC(y,m-1,d,h-8,mi||0); }
+
+  const ZONES = [
+    {id:'hotel',  name:'飯店 / 維多利亞市場', lat:-37.8067, lng:144.9586, q:'ibis Melbourne Hotel and Apartments Therry Street'},
+    {id:'cbd',    name:'市中心 Melbourne Central', lat:-37.8100, lng:144.9627, q:'Melbourne Central'},
+    {id:'carlton',name:'Carlton / 墨爾本大學', lat:-37.7975, lng:144.9640, q:'University of Melbourne Parkville'},
+    {id:'fed',    name:'Flinders St / 聯邦廣場', lat:-37.8180, lng:144.9680, q:'Federation Square'},
+    {id:'south',  name:'Southbank / 河畔', lat:-37.8210, lng:144.9650, q:'Southbank Promenade Melbourne'},
+    {id:'dock',   name:'Docklands / Southern Cross', lat:-37.8170, lng:144.9490, q:'Southern Cross Station'},
+    {id:'stk',    name:'St Kilda', lat:-37.8678, lng:144.9760, q:'St Kilda Pier'},
+    {id:'apt',    name:'機場 MEL', lat:-37.6690, lng:144.8410, q:'Melbourne Airport Terminal 2'}
+  ];
+
+  // tags: kid 親子, free 免費, food 吃, view 風景, culture 文化, shop 逛
+  const POIS = [
+    {n:'Queen Victoria Market 維多利亞女王市場', lat:-37.8076, lng:144.9568, d:'飯店隔壁。生鮮、熟食、紀念品；週三、週日有不同攤位，週一、週三部分區域休市。', t:['food','shop','kid'], h:'週二四五六 06:00–15:00，週日 09:00–16:00，週一、三休'},
+    {n:'State Library Victoria 州立圖書館', lat:-37.8098, lng:144.9652, d:'La Trobe 圓頂閱覽室免費參觀，小孩可去兒童區。', t:['free','culture','kid'], h:'10:00–18:00'},
+    {n:'Melbourne Central / Emporium', lat:-37.8100, lng:144.9627, d:'購物中心，內有舊子彈工廠磚塔和大時鐘；地下是火車站。', t:['shop'], h:'10:00–19:00'},
+    {n:'Old Melbourne Gaol 舊監獄', lat:-37.8078, lng:144.9654, d:'關過 Ned Kelly 的監獄，有牢房可進去。', t:['culture'], h:'10:00–17:00，付費'},
+    {n:'Chinatown 唐人街（Little Bourke St）', lat:-37.8117, lng:144.9680, d:'想吃中餐、港點、台菜時走這條。', t:['food'], h:''},
+    {n:'Lygon Street 義大利街', lat:-37.7993, lng:144.9670, d:'Carlton 的義大利餐廳、Gelato、咖啡。離 Kathleen Syme Library 兩個街口。', t:['food'], h:''},
+    {n:'Carlton Gardens & Royal Exhibition Building', lat:-37.8047, lng:144.9717, d:'世界遺產的皇家展覽館和大草坪，小孩可以跑。', t:['free','view','kid'], h:'花園全天開放'},
+    {n:'Melbourne Museum 墨爾本博物館', lat:-37.8033, lng:144.9717, d:'恐龍、原住民文化、兒童館 Pauline Gandel Children\'s Gallery。16 歲以下免費。', t:['kid','culture'], h:'09:00–17:00'},
+    {n:'University of Melbourne Parkville 校園', lat:-37.7963, lng:144.9614, d:'Old Quad、System Garden 可自由走。Ogawa 教授在 Asia Institute（Sidney Myer Asia Centre）。', t:['free','culture'], h:''},
+    {n:'Queen\'s College', lat:-37.7936, lng:144.9636, d:'College Crescent 上，Ogawa 教授提過要介紹 Master 和家庭公寓。', t:['culture'], h:''},
+    {n:'Flinders Street Station 車站', lat:-37.8183, lng:144.9671, d:'墨爾本地標，黃色圓頂車站。對面是 Fed Square 和 St Paul\'s 教堂。', t:['free','view'], h:''},
+    {n:'Federation Square / ACMI', lat:-37.8180, lng:144.9691, d:'廣場常有活動；ACMI 影像博物館常設展免費，小孩會喜歡。', t:['free','kid','culture'], h:'ACMI 10:00–17:00'},
+    {n:'Hosier Lane 塗鴉巷', lat:-37.8164, lng:144.9690, d:'最有名的街頭塗鴉巷，Fed Square 旁。', t:['free','view'], h:''},
+    {n:'Degraves St / Block Arcade 咖啡巷與拱廊', lat:-37.8160, lng:144.9650, d:'巷弄咖啡與馬賽克地板拱廊，Hopetoun Tea Rooms 在 Block Arcade。', t:['food','shop'], h:''},
+    {n:'NGV International 維多利亞國立美術館', lat:-37.8226, lng:144.9689, d:'常設展免費，入口水牆和彩繪玻璃天花板。', t:['free','culture','kid'], h:'10:00–17:00'},
+    {n:'Melbourne Skydeck（Eureka 88 樓）', lat:-37.8215, lng:144.9645, d:'南半球最高觀景台之一，傍晚看夜景。', t:['view','kid'], h:'12:00–22:00，付費'},
+    {n:'Southbank Promenade 河畔步道', lat:-37.8205, lng:144.9646, d:'沿 Yarra 河散步，Crown 前晚上整點有火柱表演。', t:['free','view','food'], h:''},
+    {n:'SEA LIFE Melbourne Aquarium 水族館', lat:-37.8204, lng:144.9581, d:'企鵝、鯊魚隧道，親子行程好選擇。', t:['kid'], h:'10:00–17:00，付費'},
+    {n:'Royal Botanic Gardens 皇家植物園', lat:-37.8304, lng:144.9796, d:'免費，很大，有兒童花園。可搭 8/58 電車或從 Fed Square 走 15 分鐘。', t:['free','view','kid'], h:'07:30–日落'},
+    {n:'Shrine of Remembrance 戰爭紀念館', lat:-37.8305, lng:144.9734, d:'免費，頂樓露台可眺望市區天際線。', t:['free','view','culture'], h:'10:00–17:00'},
+    {n:'Fitzroy Gardens / Cook\'s Cottage', lat:-37.8136, lng:144.9800, d:'庫克船長小屋、迷你村、溫室，小孩可玩。', t:['free','kid','view'], h:'花園全天'},
+    {n:'Docklands / Harbour Town 遊樂區', lat:-37.8147, lng:144.9448, d:'港邊步道、DFO 購物、兒童遊樂場，免費電車到得了。', t:['kid','shop'], h:''},
+    {n:'Melbourne Zoo 動物園', lat:-37.7841, lng:144.9516, d:'從飯店搭 58 號電車或 Upfield 線火車到 Royal Park 站，約 20 分鐘。', t:['kid'], h:'09:00–17:00，付費'},
+    {n:'St Kilda 海灘與企鵝', lat:-37.8678, lng:144.9740, d:'搭 16 或 96 號電車約 30 分鐘。日落後在 St Kilda Pier 防波堤看野生小企鵝回巢，免費；Luna Park 和 Acland St 蛋糕店在旁邊。', t:['free','kid','view'], h:'企鵝：日落後約 1 小時'},
+    {n:'Scienceworks 科學館', lat:-37.8260, lng:144.9080, d:'互動科學展、天文館，16 歲以下免費。從 Southern Cross 搭火車到 Spotswood。', t:['kid'], h:'10:00–16:30'},
+    {n:'Brighton Bathing Boxes 彩色小屋', lat:-37.9178, lng:144.9867, d:'海灘彩色更衣小屋，從 Flinders St 搭 Sandringham 線到 Middle Brighton，約 25 分鐘。', t:['free','view'], h:''}
+  ];
+
+  const EVENTS = [
+    {at:tpe(2026,10,8,20,30), end:tpe(2026,10,8,23,30), tz:'TPE', n:'桃園機場 T2 報到', place:'TPE 第二航廈', d:'CI057 23:30 起飛，建議 20:30 前到機場。託運每人 2 件 × 23 kg，手提 1 件 7 kg。10/06 23:30 起可網路報到。', q:'Taoyuan International Airport Terminal 2'},
+    {at:tpe(2026,10,8,23,30), end:mel(2026,10,9,11,40), tz:'TPE', n:'CI057 起飛 → 墨爾本', place:'TPE → MEL', d:'飛行約 9 小時 10 分，A350-900。', q:''},
+    {at:mel(2026,10,9,11,40), end:mel(2026,10,9,14,0), n:'抵達墨爾本 T2，入境', place:'Melbourne Airport T2', d:'入境後到 T2 外面搭 SkyBus 到 Southern Cross 站，再到飯店 check-in。', lat:-37.6690, lng:144.8410, q:'Melbourne Airport Terminal 2'},
+    {at:mel(2026,10,9,14,0), end:mel(2026,10,9,19,0), n:'Check-in、朋友會合、房間煮海鮮', place:'ibis Melbourne Hotel & Apartments', d:'15-21 Therry St。朋友帶海鮮在飯店等，房間有廚房。缺米、油、鹽、調味料或小孩的食物可就近買：Queen Victoria Market 週五只開到 15:00；Woolworths（QV Melbourne，Lonsdale St）和 Coles（Melbourne Central 地下）開到晚上，步行 8–10 分鐘。19:00 出門去聚會。', lat:-37.8067, lng:144.9586, q:'15-21 Therry Street Melbourne VIC 3000'},
+    {at:mel(2026,10,9,19,30), end:mel(2026,10,9,21,30), n:'召會聚會', place:'Kathleen Syme Library and Community Centre', d:'251 Faraday St, Carlton。從飯店步行約 15 分鐘，或 Swanston St 搭 1 / 6 號電車到 Lygon St。19:00 前從飯店出發。', lat:-37.7983, lng:144.9680, q:'Kathleen Syme Library and Community Centre 251 Faraday St Carlton'},
+    {at:mel(2026,10,10,9,0), end:mel(2026,10,10,21,0), n:'自由活動（週六）', place:'市區', d:'Queen Victoria Market 週六有開、Fed Square、Southbank、植物園；傍晚可考慮 St Kilda 看企鵝。', lat:-37.8076, lng:144.9568, q:'Queen Victoria Market'},
+    {at:mel(2026,10,11,9,0), end:mel(2026,10,11,13,0), n:'主日聚會', place:'ibis 飯店樓下集合，弟兄們開車', d:'集合時間與聚會地點待確認。', tbc:true, lat:-37.8067, lng:144.9586, q:'15-21 Therry Street Melbourne VIC 3000'},
+    {at:mel(2026,10,11,13,0), end:mel(2026,10,11,21,0), n:'自由活動（週日下午）', place:'市區', d:'Queen Victoria Market 週日 09:00–16:00 有開；Melbourne Museum、Carlton Gardens 都在附近。', lat:-37.8076, lng:144.9568, q:'Queen Victoria Market'},
+    {at:mel(2026,10,12,9,0), end:mel(2026,10,12,13,0), n:'自由活動（週一上午）', place:'市區 / Carlton', d:'下午要去大學，上午可在附近：州立圖書館、Lygon St 午餐。', lat:-37.8098, lng:144.9652, q:'State Library Victoria'},
+    {at:mel(2026,10,12,13,0), end:mel(2026,10,12,17,30), n:'拜訪 Ogawa 教授、旁聽課程', place:'University of Melbourne, Parkville', d:'Asia Institute（Sidney Myer Asia Centre）。確切時間與教室待他回信；可能介紹 Queen\'s College。步行 20 分鐘或 Swanston St 電車到 Melbourne University 站。', tbc:true, lat:-37.7963, lng:144.9614, q:'Sidney Myer Asia Centre University of Melbourne'},
+    {at:mel(2026,10,13,9,0), end:mel(2026,10,13,11,0), n:'退房、寄放行李', place:'ibis Melbourne', d:'退房通常 11:00 前，行李寄飯店。', lat:-37.8067, lng:144.9586, q:'15-21 Therry Street Melbourne VIC 3000'},
+    {at:mel(2026,10,13,11,0), end:mel(2026,10,13,18,0), n:'自由活動（最後半天）', place:'市區', d:'留在免費電車區比較保險，18:00 前回飯店拿行李。', lat:-37.8100, lng:144.9627, q:'Melbourne Central'},
+    {at:mel(2026,10,13,18,0), end:mel(2026,10,13,21,50), n:'前往機場，CI058 21:50 起飛', place:'Melbourne Airport T2', d:'Southern Cross 長途巴士總站 Bay 75 上車（Spencer St 側，Bourke St 入口附近有售票機），用 Return 票的第二段。約 30–45 分鐘，18:30 前出發，19:15 前到 T2。10/11 21:50 起可先網路報到。', lat:-37.6690, lng:144.8410, q:'Melbourne Airport Terminal 2'},
+    {at:mel(2026,10,13,21,50), end:tpe(2026,10,14,4,15), n:'CI058 起飛 → 台北', place:'MEL → TPE', d:'飛行約 9 小時 25 分，10/14 04:15 抵達桃園 T2。', q:''}
+  ];
+
+  const ARRIVAL = [
+    {t:'降落前：填入境卡', d:'空服員會發 <b>Incoming Passenger Card</b>（紙本，有中文版可要）。每人一張，小孩由大人代填。食物、藥品、超過 AUD 10,000 現金都要勾「是」。護照、入境卡、ETA 核發信先放手邊。'},
+    {t:'下機後跟「Arrivals / Baggage Claim」走', d:'T2 下機後沿指標走到入境大廳，推嬰兒車走路約 5–10 分鐘。先開手機漫遊或 eSIM。'},
+    {t:'入境查驗（Immigration）', d:'16 歲以上台灣晶片護照可用 <b>SmartGate</b> 自助閘門。2 歲和 4 歲的小孩不能用，建議<b>全家一起排人工櫃檯</b>，一次辦完。'},
+    {t:'領行李', d:'看螢幕找 <b>CI057</b> 的轉盤號碼。4 件大行李，先拿兩台推車，嬰兒車若託運通常在同一轉盤或旁邊的大件區。'},
+    {t:'海關與檢疫（Biosecurity）', d:'出口前交入境卡。有申報的走申報通道，官員會問帶了什麼，泡麵、餅乾、茶葉、嬰兒食品通常放行，<b>新鮮水果、肉類、蛋製品、種子會被沒收</b>。隨機會 X 光檢查行李。'},
+    {t:'先買 SkyBus 票（網路或 T2 一樓櫃台）', d:'最快是出發前就在 <b>skybus.com.au 或 SkyBus App</b> 買好，票寄到 email、手機出示 QR code 即可，可存進 Apple Wallet，無手續費。沒先買的話 T2 入境層有 <b>SkyBus 售票櫃台</b>，各站牌旁也有紅色自助機（只收卡）。<br><b>你們家買法</b>：大人 2 張 Return（AUD 43.40／張）+ 4 歲 1 張 Child Return（AUD 11.00）＝ <b>AUD 97.80</b>，2 歲免票（兒童票是 4–16 歲，結帳沒有更小的選項）。Return 票 12 個月內有效、兩段可不同天，回程 10/13 直接用。驗票時可能要看小孩證件，護照帶著。', links:[['SkyBus 買票','https://www.skybus.com.au/melbourne-city-express/buy-tickets/'],['票價頁','https://www.skybus.com.au/melbourne-city-express/fares/']]},
+    {t:'走到 T1 或 T3 門外的 SkyBus 站牌', d:'<b>T2 本身沒有站牌</b>。站牌在 <b>T1 行李提領區外</b>和 <b>T3 門外</b>的路邊（Kerbside），T2 剛好在兩者中間，走有遮棚的人行道各約 3–5 分鐘，看紅色 SkyBus 招牌和巴士。不確定方向就先問 T2 的 SkyBus 櫃台。10/06 起機場私家車接送改到新的 Transport Hub，但 <b>SkyBus、計程車、Uber 上車處仍在航廈門外路邊</b>，不受影響。', links:[['T1 站牌','https://www.google.com/maps/search/?api=1&query=SkyBus+stop+Terminal+1+Melbourne+Airport'],['官方站牌圖','https://www.skybus.com.au/melbourne-city-express/locations/']]},
+    {t:'上車', d:'不用訂班次，<b>隨到隨上</b>，04:00–01:00 全年每天開，白天大約 10 分鐘一班，到站牌前 5–10 分鐘就好。行李額度同航空公司（每人 2 件），大件放車底行李艙，司機會協助；<b>嬰兒車可帶上車</b>，但視空間而定，太滿時司機可能請你等下一班。車上有免費 WiFi。'},
+    {t:'到 Southern Cross 站（平均 30 分鐘，尖峰 45）', d:'下車處是 <b>Southern Cross Station 長途巴士總站（Spencer St 側）</b>，有廁所。記住回程：<b>往機場的車從 Bay 75 發車</b>，自助售票機在 Bourke St 入口附近（Degani 咖啡對面）。', links:[['Southern Cross 巴士總站','https://www.google.com/maps/search/?api=1&query=Southern+Cross+Station+Coach+Terminal+Spencer+Street']]},
+    {t:'從 Southern Cross 到飯店（約 2.5 km）', d:'<b>建議到 Spencer St 的計程車招呼站排車</b>（不要叫 Uber：預約車依法要兒童座椅，招呼站計程車免），跟站務員要 maxi 或 wagon，約 10 分鐘、AUD 15–25。省錢版：走到 Bourke St / Spencer St 搭免費電車 86 或 96 到 Elizabeth St，轉 19 / 57 / 59 往北兩站到 <b>Queen Victoria Market (Stop 7)</b>，下車就是 Therry St。', links:[['導航到 ibis','https://www.google.com/maps/dir/?api=1&origin=Southern+Cross+Station+Melbourne&destination=15-21+Therry+Street+Melbourne+VIC+3000&travelmode=transit'],['ibis 飯店','https://www.google.com/maps/search/?api=1&query=15-21+Therry+Street+Melbourne+VIC+3000']]},
+    {t:'Check-in、休息', d:'ibis Melbourne Hotel & Apartments，15-21 Therry St。入住一般 14:00 起。朋友帶海鮮在飯店等你們，一起在房間開伙；缺的食材到 Woolworths QV 或 Coles Melbourne Central 補（步行 8–10 分鐘）。吃完 19:00 出門去 Carlton 聚會。'}
+  ];
+
+  // ---- Helpers --------------------------------------------------------------
+  const $ = id => document.getElementById(id);
+  function km(a,b){
+    const R=6371, toR=x=>x*Math.PI/180;
+    const dLat=toR(b.lat-a.lat), dLng=toR(b.lng-a.lng);
+    const s=Math.sin(dLat/2)**2+Math.cos(toR(a.lat))*Math.cos(toR(b.lat))*Math.sin(dLng/2)**2;
+    return 2*R*Math.asin(Math.sqrt(s));
+  }
+  function fmtDist(k){ return k<1 ? Math.round(k*100)*10+' m' : k.toFixed(1)+' km'; }
+  function travelHint(k){
+    const walk=Math.round(k*1000/75);
+    if(k<=2.2) return '步行約 '+walk+' 分';
+    if(k<=6) return '電車約 '+Math.round(10+k*4)+' 分';
+    return '需搭車，約 '+Math.round(15+k*2.5)+' 分';
+  }
+  function fmtTime(ms,tz){
+    return new Intl.DateTimeFormat('zh-TW',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:tz}).format(new Date(ms));
+  }
+  function fmtDay(ms,tz){
+    return new Intl.DateTimeFormat('zh-TW',{month:'numeric',day:'numeric',weekday:'short',timeZone:tz}).format(new Date(ms));
+  }
+  function dur(ms){
+    const m=Math.round(ms/60000);
+    if(m<60) return m+' 分鐘';
+    const h=Math.floor(m/60), r=m%60;
+    if(h<24) return h+' 小時'+(r?' '+r+' 分':'');
+    return Math.floor(h/24)+' 天 '+(h%24)+' 小時';
+  }
+  function mapsSearch(q){ return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q); }
+  function mapsDir(from,to,mode){
+    return 'https://www.google.com/maps/dir/?api=1&origin='+from.lat+','+from.lng+'&destination='+to.lat+','+to.lng+'&travelmode='+(mode||'walking');
+  }
+  function store(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+  function load(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+
+  // ---- State ---------------------------------------------------------------
+  let zone = ZONES.find(z=>z.id===load('mel.zone')) || ZONES[0];
+  let filter = load('mel.filter') || 'all';
+  // For testing a different moment, set window.FAKE_NOW = Date.UTC(...)
+  const now = () => window.FAKE_NOW || Date.now();
+
+  // ---- Clock & day label -----------------------------------------------------
+  function renderClock(){
+    const t=now();
+    $('melTime').textContent = fmtTime(t,'Australia/Melbourne');
+    $('melDate').textContent = fmtDay(t,'Australia/Melbourne')+' 墨爾本';
+    $('tpeTime').textContent = '台北 '+fmtTime(t,'Asia/Taipei');
+    const start=mel(2026,10,9,0,0), dayN=Math.floor((t-start)/86400000)+1;
+    $('dayLabel').textContent = (dayN>=1&&dayN<=5) ? '墨爾本第 '+dayN+' 天・10/09–10/13' : '10/08 出發・10/14 返台・CI057 / CI058';
+  }
+
+  // ---- Next stop -------------------------------------------------------------
+  function renderNext(){
+    const t=now();
+    let cur=EVENTS.find(e=>t>=e.at&&t<e.end);
+    let next=EVENTS.find(e=>e.at>t);
+    const card=$('nextCard');
+    let show, label, cd, cdWarn=false;
+    if(cur && !/自由活動/.test(cur.n)){
+      show=cur; label='進行中・到 '+fmtTime(cur.end, cur.tz==='TPE'?'Asia/Taipei':'Australia/Melbourne');
+      cd='結束前還有 '+dur(cur.end-t);
+    } else if(next){
+      show=next; const tz=next.tz==='TPE'?'Asia/Taipei':'Australia/Melbourne';
+      label=fmtDay(next.at,tz)+' '+fmtTime(next.at,tz)+(next.tz==='TPE'?'（台北時間）':'');
+      cd='還有 '+dur(next.at-t); cdWarn=(next.at-t)<90*60000;
+    } else {
+      $('nextWhen').textContent='行程結束'; $('nextTitle').textContent='歡迎回家'; $('nextAddr').textContent='';
+      $('nextCountdown').hidden=true; $('nextHow').hidden=true; $('nextBtns').innerHTML=''; $('afterNext').textContent=''; return;
+    }
+    $('nextWhen').textContent=label;
+    $('nextTitle').innerHTML=show.n+(show.tbc?'<span class="tbc">時間待確認</span>':'');
+    $('nextAddr').textContent=show.place;
+    const c=$('nextCountdown'); c.textContent=cd; c.hidden=false; c.classList.toggle('warn',cdWarn);
+    const how=$('nextHow');
+    let howTxt=show.d||'';
+    if(show.lat){ const k=km(zone,show); howTxt+=' 從「'+zone.name+'」約 '+fmtDist(k)+'，'+travelHint(k)+'。'; }
+    how.textContent=howTxt; how.hidden=!howTxt;
+    const b=$('nextBtns'); b.innerHTML='';
+    if(show.lat){
+      const k=km(zone,show);
+      b.innerHTML='<a class="btn primary" target="_blank" rel="noopener" href="'+mapsDir(zone,show,k<=2.2?'walking':'transit')+'">導航過去</a>'
+        +'<a class="btn" target="_blank" rel="noopener" href="'+mapsSearch(show.q)+'">看地點</a>';
+    } else if(show.q){
+      b.innerHTML='<a class="btn" target="_blank" rel="noopener" href="'+mapsSearch(show.q)+'">看地點</a>';
+    }
+    const after=EVENTS.find(e=>e.at>show.at && e!==show);
+    $('afterNext').textContent = after ? '再之後：'+fmtDay(after.at,after.tz==='TPE'?'Asia/Taipei':'Australia/Melbourne')+' '+fmtTime(after.at,after.tz==='TPE'?'Asia/Taipei':'Australia/Melbourne')+' '+after.n : '';
+  }
+
+  // ---- Zones -----------------------------------------------------------------
+  function renderZones(){
+    const box=$('zoneChips'); box.innerHTML='';
+    ZONES.forEach(z=>{
+      const btn=document.createElement('button'); btn.type='button'; btn.className='chip';
+      btn.textContent=z.name; btn.setAttribute('aria-pressed', z.id===zone.id);
+      btn.addEventListener('click',()=>{ zone=z; store('mel.zone',z.id); renderZones(); renderNext(); renderPois(); });
+      box.appendChild(btn);
+    });
+    $('zoneMap').href=mapsSearch(zone.q);
+  }
+
+  // ---- POIs ------------------------------------------------------------------
+  const FILTERS=[['all','全部'],['kid','親子'],['free','免費'],['food','吃東西'],['view','風景'],['culture','文化'],['shop','逛街']];
+  const TAGN={kid:'親子',free:'免費',food:'吃',view:'風景',culture:'文化',shop:'逛街'};
+  function renderFilters(){
+    const box=$('filters'); box.innerHTML='';
+    FILTERS.forEach(([id,name])=>{
+      const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=name;
+      b.setAttribute('aria-pressed', id===filter);
+      b.addEventListener('click',()=>{ filter=id; store('mel.filter',id); renderFilters(); renderPois(); });
+      box.appendChild(b);
+    });
+  }
+  function renderPois(){
+    const list=$('poiList'); list.innerHTML='';
+    POIS.map(p=>({p,k:km(zone,p)}))
+      .filter(x=>filter==='all'||x.p.t.includes(filter))
+      .sort((a,b)=>a.k-b.k)
+      .forEach(({p,k})=>{
+        const el=document.createElement('div'); el.className='poi';
+        el.innerHTML='<div class="name">'+p.n+'</div>'
+          +'<div class="dist mono">'+fmtDist(k)+'<small>'+travelHint(k)+'</small></div>'
+          +'<div class="desc">'+p.d+(p.h?'<br><span class="mono" style="font-size:12px">'+p.h+'</span>':'')+'</div>'
+          +'<div class="meta">'+p.t.map(t=>'<span class="tag '+(t==='kid'?'kid':'')+'">'+TAGN[t]+'</span>').join('')
+          +'<span class="links"><a target="_blank" rel="noopener" href="'+mapsSearch(p.q||p.n)+'">開地圖</a>'
+          +'<a class="go" target="_blank" rel="noopener" href="'+mapsDir(zone,p,k<=2.2?'walking':'transit')+'">導航</a></span></div>';
+        list.appendChild(el);
+      });
+  }
+
+  // ---- Itinerary -------------------------------------------------------------
+  function renderItin(){
+    const t=now(); const box=$('itin'); box.innerHTML='';
+    const days={};
+    EVENTS.forEach(e=>{
+      const tz=e.tz==='TPE'?'Asia/Taipei':'Australia/Melbourne';
+      const key=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(e.at));
+      (days[key]=days[key]||{label:fmtDay(e.at,tz)+(e.tz==='TPE'?'（台北）':''),items:[]}).items.push(e);
+    });
+    Object.keys(days).sort().forEach(k=>{
+      const d=days[k]; const sec=document.createElement('div'); sec.className='day';
+      let html='<h3>'+d.label+'</h3>';
+      d.items.forEach(e=>{
+        const tz=e.tz==='TPE'?'Asia/Taipei':'Australia/Melbourne';
+        const cls = t>=e.end?'past':(t>=e.at?'current':'');
+        html+='<div class="ev '+cls+'"><div class="t mono">'+fmtTime(e.at,tz)+'</div><div class="n">'+e.n+(e.tbc?'<span class="tbc">待確認</span>':'')+'</div><div class="d">'+e.place+(e.d?'。'+e.d:'')+'</div></div>';
+      });
+      sec.innerHTML=html; box.appendChild(sec);
+    });
+  }
+
+  function renderArrival(){
+    const box=$('arrival'); box.innerHTML='';
+    ARRIVAL.forEach(s=>{
+      const el=document.createElement('div'); el.className='step';
+      el.innerHTML='<div class="st">'+s.t+'</div><div class="sd">'+s.d+'</div>'
+        +(s.links?'<div class="sl">'+s.links.map(l=>'<a target="_blank" rel="noopener" href="'+l[1]+'">'+l[0]+'</a>').join('')+'</div>':'');
+      box.appendChild(el);
+    });
+  }
+  renderArrival();
+
+  function renderAll(){ renderClock(); renderNext(); renderZones(); renderFilters(); renderPois(); renderItin(); }
+  renderAll();
+  setInterval(()=>{ renderClock(); renderNext(); }, 30000);
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) renderAll(); });
+})();
+</script>
+</body>
+</html>
