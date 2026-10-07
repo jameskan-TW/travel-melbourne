@@ -96,7 +96,7 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
 .step .sl a{font-size:13px;text-decoration:none;font-weight:500;padding:4px 10px;border-radius:8px;border:1px solid var(--line)}
 .callout{background:var(--warn-soft);color:var(--fg);border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:12px}
 .callout b{color:var(--warn)}
-.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin:-4px 0 8px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 66px);z-index:4;background:var(--bg);padding-top:6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin:-4px 0 8px;position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--hdr,66px));z-index:4;background:var(--bg);padding-top:6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .tabs::-webkit-scrollbar{display:none}
 .tab{flex:0 0 auto;border:1px solid var(--line);background:var(--chip);color:var(--fg);border-radius:10px;padding:8px 12px;font-size:13px;font-family:var(--sans);cursor:pointer;line-height:1.2;text-align:center}
 .tab b{display:block;font-size:15px;font-family:var(--mono);font-weight:500}
@@ -510,6 +510,8 @@ details summary::-webkit-details-marker{display:none}
   renderArrival();
 
   function renderAll(){ renderClock(); renderNext(); renderZones(); renderFilters(); renderPois(); renderItin(); }
+  function setHdr(){ const h=document.querySelector('.now'); if(h) document.documentElement.style.setProperty('--hdr', h.offsetHeight+'px'); }
+  setHdr(); window.addEventListener('resize', setHdr); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(setHdr);
   renderAll();
   fetchWx();
   setInterval(()=>{ renderClock(); renderNext(); }, 30000);
