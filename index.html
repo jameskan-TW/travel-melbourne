@@ -95,7 +95,17 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
 .step .sl a{font-size:13px;text-decoration:none;font-weight:500;padding:4px 10px;border-radius:8px;border:1px solid var(--line)}
 .callout{background:var(--warn-soft);color:var(--fg);border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:12px}
 .callout b{color:var(--warn)}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin:-4px 0 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;border:1px solid var(--line);background:var(--chip);color:var(--fg);border-radius:10px;padding:8px 12px;font-size:13px;font-family:var(--sans);cursor:pointer;line-height:1.2;text-align:center}
+.tab b{display:block;font-size:15px;font-family:var(--mono);font-weight:500}
+.tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.tab.today{box-shadow:0 0 0 2px var(--accent-soft)}
 .day{margin-top:14px}
+.day[hidden]{display:none}
+.daynav{display:flex;justify-content:space-between;margin-top:14px;gap:8px}
+.daynav button{border:1px solid var(--line);background:var(--card);color:var(--accent);border-radius:10px;padding:8px 14px;font-size:14px;font-family:var(--sans);cursor:pointer}
+.daynav button:disabled{opacity:.35;cursor:default}
 .day h3{font-size:15px;font-weight:700;padding-bottom:6px;border-bottom:1px solid var(--line);margin-bottom:8px}
 .day h3 span{color:var(--muted);font-weight:400;font-size:13px;margin-left:8px}
 .ev{display:grid;grid-template-columns:62px 1fr;gap:2px 10px;padding:6px 0}
@@ -157,7 +167,9 @@ details summary::-webkit-details-marker{display:none}
   <div class="list" id="poiList"></div>
 
   <h2>完整行程</h2>
+  <div class="tabs" id="dayTabs" role="tablist" aria-label="依天數切換"></div>
   <div class="card" id="itin"></div>
+  <div class="daynav"><button type="button" id="prevDay">‹ 前一天</button><button type="button" id="nextDay">後一天 ›</button></div>
 
   <h2>實用資訊</h2>
   <div class="card prac" id="prac">
@@ -389,18 +401,45 @@ details summary::-webkit-details-marker{display:none}
       });
   }
 
-  // ---- Itinerary -------------------------------------------------------------
+  // ---- Itinerary (one tab per day) --------------------------------------------
+  let dayKeys=[], activeDay=null;
+  function dayKeyOf(e){
+    const tz=e.tz==='TPE'?'Asia/Taipei':'Australia/Melbourne';
+    return new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(e.at));
+  }
+  function todayKey(){
+    return new Intl.DateTimeFormat('en-CA',{timeZone:'Australia/Melbourne',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(now()));
+  }
+  const DAYTITLE={'2026-10-08':'出發','2026-10-09':'抵達・聚會','2026-10-10':'可頌・市區','2026-10-11':'主日','2026-10-12':'大學','2026-10-13':'午餐・回程'};
   function renderItin(){
     const t=now(); const box=$('itin'); box.innerHTML='';
     const days={};
     EVENTS.forEach(e=>{
-      const tz=e.tz==='TPE'?'Asia/Taipei':'Australia/Melbourne';
-      const key=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(e.at));
-      (days[key]=days[key]||{label:fmtDay(e.at,tz)+(e.tz==='TPE'?'（台北）':''),items:[]}).items.push(e);
+      const k=dayKeyOf(e); const tz=e.tz==='TPE'?'Asia/Taipei':'Australia/Melbourne';
+      (days[k]=days[k]||{label:fmtDay(e.at,tz)+(e.tz==='TPE'?'（台北）':''),items:[]}).items.push(e);
     });
-    Object.keys(days).sort().forEach(k=>{
-      const d=days[k]; const sec=document.createElement('div'); sec.className='day';
-      let html='<h3>'+d.label+'</h3>';
+    dayKeys=Object.keys(days).sort();
+    const tk=todayKey();
+    if(!activeDay){
+      const fromHash=(location.hash||'').replace('#','');
+      const h=dayKeys.find(k=>'d'+k.slice(5).replace('-','')===fromHash);
+      activeDay = h || (dayKeys.includes(tk)?tk:null) || load('mel.day') || dayKeys[0];
+      if(!dayKeys.includes(activeDay)) activeDay=dayKeys[0];
+    }
+    // tabs
+    const tabs=$('dayTabs'); tabs.innerHTML='';
+    dayKeys.forEach(k=>{
+      const b=document.createElement('button'); b.type='button'; b.className='tab'+(k===tk?' today':''); b.setAttribute('role','tab');
+      b.setAttribute('aria-selected', k===activeDay);
+      const md=k.slice(5).replace('-','/'); const wd=new Intl.DateTimeFormat('zh-TW',{weekday:'short',timeZone:'Australia/Melbourne'}).format(new Date(k+'T12:00:00+11:00'));
+      b.innerHTML='<b>'+md+'</b>'+wd+'・'+(DAYTITLE[k]||'');
+      b.addEventListener('click',()=>{ activeDay=k; store('mel.day',k); try{history.replaceState(null,'','#d'+k.slice(5).replace('-',''));}catch(e){} renderItin(); });
+      tabs.appendChild(b);
+    });
+    // panel
+    dayKeys.forEach(k=>{
+      const d=days[k]; const sec=document.createElement('div'); sec.className='day'; sec.hidden=(k!==activeDay);
+      let html='<h3>'+d.label+'<span>'+(k===tk?'今天':'')+'</span></h3>';
       d.items.forEach(e=>{
         const tz=e.tz==='TPE'?'Asia/Taipei':'Australia/Melbourne';
         const cls = t>=e.end?'past':(t>=e.at?'current':'');
@@ -408,7 +447,12 @@ details summary::-webkit-details-marker{display:none}
       });
       sec.innerHTML=html; box.appendChild(sec);
     });
+    const idx=dayKeys.indexOf(activeDay);
+    $('prevDay').disabled = idx<=0; $('nextDay').disabled = idx>=dayKeys.length-1;
+    const sel=tabs.querySelector('[aria-selected="true"]'); if(sel && sel.scrollIntoView) sel.scrollIntoView({block:'nearest',inline:'center'});
   }
+  $('prevDay').addEventListener('click',()=>{ const i=dayKeys.indexOf(activeDay); if(i>0){ activeDay=dayKeys[i-1]; store('mel.day',activeDay); renderItin(); } });
+  $('nextDay').addEventListener('click',()=>{ const i=dayKeys.indexOf(activeDay); if(i<dayKeys.length-1){ activeDay=dayKeys[i+1]; store('mel.day',activeDay); renderItin(); } });
 
   function renderArrival(){
     const box=$('arrival'); box.innerHTML='';
