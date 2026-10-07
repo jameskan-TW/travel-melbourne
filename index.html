@@ -47,6 +47,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-
 a{color:var(--accent)}
 h1,h2,h3{margin:0;text-wrap:balance;line-height:1.25}
 h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500;margin:28px 0 10px}
+.wrap>h2:first-of-type{margin-top:16px}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .now{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:12px 10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
 .now h1{font-size:20px;font-weight:700}
@@ -95,7 +96,7 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
 .step .sl a{font-size:13px;text-decoration:none;font-weight:500;padding:4px 10px;border-radius:8px;border:1px solid var(--line)}
 .callout{background:var(--warn-soft);color:var(--fg);border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:12px}
 .callout b{color:var(--warn)}
-.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin:-4px 0 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin:-4px 0 8px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 66px);z-index:4;background:var(--bg);padding-top:6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .tabs::-webkit-scrollbar{display:none}
 .tab{flex:0 0 auto;border:1px solid var(--line);background:var(--chip);color:var(--fg);border-radius:10px;padding:8px 12px;font-size:13px;font-family:var(--sans);cursor:pointer;line-height:1.2;text-align:center}
 .tab b{display:block;font-size:15px;font-family:var(--mono);font-weight:500}
@@ -137,6 +138,11 @@ details summary::-webkit-details-marker{display:none}
     </div>
   </header>
 
+  <h2>每日行程</h2>
+  <div class="tabs" id="dayTabs" role="tablist" aria-label="依天數切換"></div>
+  <div class="card" id="itin"></div>
+  <div class="daynav"><button type="button" id="prevDay">‹ 前一天</button><button type="button" id="nextDay">後一天 ›</button></div>
+
   <h2>下一站</h2>
   <div class="card next" id="nextCard">
     <div class="when" id="nextWhen">載入中</div>
@@ -165,11 +171,6 @@ details summary::-webkit-details-marker{display:none}
   <h2>附近可以去</h2>
   <div class="filters" id="filters" role="group" aria-label="篩選景點"></div>
   <div class="list" id="poiList"></div>
-
-  <h2>完整行程</h2>
-  <div class="tabs" id="dayTabs" role="tablist" aria-label="依天數切換"></div>
-  <div class="card" id="itin"></div>
-  <div class="daynav"><button type="button" id="prevDay">‹ 前一天</button><button type="button" id="nextDay">後一天 ›</button></div>
 
   <h2>實用資訊</h2>
   <div class="card prac" id="prac">
