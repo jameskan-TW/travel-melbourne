@@ -104,6 +104,13 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
 .tab.today{box-shadow:0 0 0 2px var(--accent-soft)}
 .day{margin-top:14px}
 .day[hidden]{display:none}
+.wx{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;align-items:center;background:var(--accent-soft);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.wx .sym{font-size:28px;line-height:1;grid-row:1/3}
+.wx .main{font-weight:700;font-size:15px}
+.wx .main .t{font-family:var(--mono);font-weight:500}
+.wx .sub{color:var(--muted);font-size:12px}
+.wx.rainy{background:var(--warn-soft)}
+.tab small{display:block;font-size:11px;color:inherit;opacity:.8;font-family:var(--mono)}
 .daynav{display:flex;justify-content:space-between;margin-top:14px;gap:8px}
 .daynav button{border:1px solid var(--line);background:var(--card);color:var(--accent);border-radius:10px;padding:8px 14px;font-size:14px;font-family:var(--sans);cursor:pointer}
 .daynav button:disabled{opacity:.35;cursor:default}
@@ -174,6 +181,7 @@ details summary::-webkit-details-marker{display:none}
 
   <h2>實用資訊</h2>
   <div class="card prac" id="prac">
+    <div class="row"><div class="k">天氣</div><div>每日分頁上方的預報來自 Open-Meteo，網頁打開時自動更新；抓不到時顯示 10/07 的備援預報。10 月墨爾本一天四季，外套常備。</div></div>
     <div class="row"><div class="k">時差</div><div>墨爾本比台北快 3 小時（10 月已進入夏令時間 AEDT）。</div></div>
     <div class="row"><div class="k">機場進城</div><div>SkyBus 站牌在 T1 與 T3 門外（T2 沒有站牌，走 3–5 分鐘），04:00–01:00 隨到隨上，平均 30 分鐘到 Southern Cross。全家 Return 票 AUD 97.80（2 歲免票）。回程 10/13 從 Southern Cross <b>Bay 75</b> 上車，18:30 前出發。</div></div>
     <div class="row"><div class="k">市區交通</div><div>CBD 範圍內電車免費（Free Tram Zone，含 Queen Victoria Market、Flinders St、Docklands）。出免費區要用 myki 卡，或直接在讀卡機感應信用卡／Apple Pay。</div></div>
@@ -271,6 +279,41 @@ details summary::-webkit-details-marker{display:none}
     {t:'從 Southern Cross 到飯店（約 2.5 km）', d:'<b>建議到 Spencer St 的計程車招呼站排車</b>（不要叫 Uber：預約車依法要兒童座椅，招呼站計程車免），跟站務員要 maxi 或 wagon，約 10 分鐘、AUD 15–25。省錢版：走到 Bourke St / Spencer St 搭免費電車 86 或 96 到 Elizabeth St，轉 19 / 57 / 59 往北兩站到 <b>Queen Victoria Market (Stop 7)</b>，下車就是 Therry St。', links:[['導航到 ibis','https://www.google.com/maps/dir/?api=1&origin=Southern+Cross+Station+Melbourne&destination=15-21+Therry+Street+Melbourne+VIC+3000&travelmode=transit'],['ibis 飯店','https://www.google.com/maps/search/?api=1&query=15-21+Therry+Street+Melbourne+VIC+3000']]},
     {t:'Check-in、休息', d:'ibis Melbourne Hotel & Apartments，15-21 Therry St。入住一般 14:00 起。朋友帶海鮮在飯店等你們，一起在房間開伙；缺的食材到 Woolworths QV 或 Coles Melbourne Central 補（步行 8–10 分鐘）。吃完 19:00 出門去 Carlton 聚會。'}
   ];
+
+  // ---- Weather (Open-Meteo; live fetch with embedded fallback) -----------------
+  const WX_URL='https://api.open-meteo.com/v1/forecast?latitude=-37.8136&longitude=144.9631&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,sunrise,sunset&timezone=Australia%2FMelbourne&start_date=2026-10-08&end_date=2026-10-14';
+  const WX_SNAPSHOT={fetched:'10/07 19:00', daily:{"time": ["2026-10-08", "2026-10-09", "2026-10-10", "2026-10-11", "2026-10-12", "2026-10-13", "2026-10-14"], "weather_code": [2, 3, 80, 2, 55, 53, 53], "temperature_2m_max": [21.3, 24.4, 21.1, 22.1, 21.4, 14.5, 13.7], "temperature_2m_min": [6.7, 12.2, 15.1, 11.3, 11.4, 8.0, 6.0], "precipitation_probability_max": [0, 0, 39, 0, 78, 59, 76], "precipitation_sum": [0.0, 0.0, 2.6, 0.0, 8.4, 9.6, 10.2], "wind_speed_10m_max": [18.9, 22.6, 19.7, 20.5, 23.3, 15.4, 25.7], "sunrise": ["2026-10-08T06:45", "2026-10-09T06:44", "2026-10-10T06:42", "2026-10-11T06:41", "2026-10-12T06:40", "2026-10-13T06:38", "2026-10-14T06:37"], "sunset": ["2026-10-08T19:30", "2026-10-09T19:31", "2026-10-10T19:32", "2026-10-11T19:33", "2026-10-12T19:34", "2026-10-13T19:35", "2026-10-14T19:36"]}};
+  let WX={}; let wxMeta=WX_SNAPSHOT.fetched+'（備援資料）';
+  function wmo(c){
+    if(c===0) return ['☀️','晴'];
+    if(c===1) return ['🌤️','大致晴'];
+    if(c===2) return ['⛅','多雲時晴'];
+    if(c===3) return ['☁️','陰'];
+    if(c===45||c===48) return ['🌫️','霧'];
+    if(c>=51&&c<=57) return ['🌦️','毛毛雨'];
+    if(c>=61&&c<=67) return ['🌧️','雨'];
+    if(c>=71&&c<=77) return ['🌨️','雪'];
+    if(c>=80&&c<=82) return ['🌦️','陣雨'];
+    if(c>=95) return ['⛈️','雷雨'];
+    return ['🌡️','—'];
+  }
+  function loadWx(d){
+    WX={}; (d.time||[]).forEach((k,i)=>{ WX[k]={code:d.weather_code[i],max:d.temperature_2m_max[i],min:d.temperature_2m_min[i],pop:d.precipitation_probability_max[i],mm:d.precipitation_sum[i],wind:d.wind_speed_10m_max[i],rise:(d.sunrise[i]||'').slice(11),set:(d.sunset[i]||'').slice(11)}; });
+  }
+  loadWx(WX_SNAPSHOT.daily);
+  function wxHtml(k){
+    const w=WX[k]; if(!w) return '';
+    const [sym,txt]=wmo(w.code); const rainy=w.pop>=50;
+    return '<div class="wx'+(rainy?' rainy':'')+'"><div class="sym">'+sym+'</div>'
+      +'<div class="main">'+txt+' <span class="t">'+Math.round(w.min)+'–'+Math.round(w.max)+'°C</span>'+(rainy?'　帶雨具':'')+'</div>'
+      +'<div class="sub">降雨 '+w.pop+'%・'+w.mm+' mm・風 '+Math.round(w.wind)+' km/h・日出 '+w.rise+' 日落 '+w.set+'・預報 '+wxMeta+'</div></div>';
+  }
+  function fetchWx(){
+    if(!window.fetch) return;
+    fetch(WX_URL,{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(j=>{
+      if(j&&j.daily&&j.daily.time){ loadWx(j.daily); wxMeta=fmtDay(now(),'Australia/Melbourne').replace(/（.*?）/,'')+' '+fmtTime(now(),'Australia/Melbourne')+' 更新'; renderItin(); }
+    }).catch(()=>{});
+  }
 
   // ---- Helpers --------------------------------------------------------------
   const $ = id => document.getElementById(id);
@@ -433,14 +476,14 @@ details summary::-webkit-details-marker{display:none}
       const b=document.createElement('button'); b.type='button'; b.className='tab'+(k===tk?' today':''); b.setAttribute('role','tab');
       b.setAttribute('aria-selected', k===activeDay);
       const md=k.slice(5).replace('-','/'); const wd=new Intl.DateTimeFormat('zh-TW',{weekday:'short',timeZone:'Australia/Melbourne'}).format(new Date(k+'T12:00:00+11:00'));
-      b.innerHTML='<b>'+md+'</b>'+wd+'・'+(DAYTITLE[k]||'');
+      const w=WX[k]; b.innerHTML='<b>'+md+'</b>'+wd+'・'+(DAYTITLE[k]||'')+(w?'<small>'+wmo(w.code)[0]+' '+Math.round(w.min)+'–'+Math.round(w.max)+'°</small>':'');
       b.addEventListener('click',()=>{ activeDay=k; store('mel.day',k); try{history.replaceState(null,'','#d'+k.slice(5).replace('-',''));}catch(e){} renderItin(); });
       tabs.appendChild(b);
     });
     // panel
     dayKeys.forEach(k=>{
       const d=days[k]; const sec=document.createElement('div'); sec.className='day'; sec.hidden=(k!==activeDay);
-      let html='<h3>'+d.label+'<span>'+(k===tk?'今天':'')+'</span></h3>';
+      let html='<h3>'+d.label+'<span>'+(k===tk?'今天':'')+'</span></h3>'+wxHtml(k);
       d.items.forEach(e=>{
         const tz=e.tz==='TPE'?'Asia/Taipei':'Australia/Melbourne';
         const cls = t>=e.end?'past':(t>=e.at?'current':'');
@@ -468,8 +511,10 @@ details summary::-webkit-details-marker{display:none}
 
   function renderAll(){ renderClock(); renderNext(); renderZones(); renderFilters(); renderPois(); renderItin(); }
   renderAll();
+  fetchWx();
   setInterval(()=>{ renderClock(); renderNext(); }, 30000);
-  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) renderAll(); });
+  setInterval(fetchWx, 60*60*1000);
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ renderAll(); fetchWx(); } });
 })();
 </script>
 </body>
